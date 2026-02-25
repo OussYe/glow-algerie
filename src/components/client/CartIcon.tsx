@@ -3,15 +3,17 @@
 import Link from 'next/link'
 import { ShoppingBagIcon } from '@heroicons/react/24/outline'
 import { useCart } from '@/context/CartContext'
+import { useTranslation } from '@/context/LanguageContext'
 
 export default function CartIcon() {
   const { count } = useCart()
+  const { t } = useTranslation()
 
   return (
     <Link
       href="/panier"
       className="relative inline-flex items-center p-2 rounded-full hover:bg-rose-50 transition"
-      aria-label="Panier"
+      aria-label={t('cart')}
     >
       <ShoppingBagIcon className="w-6 h-6 text-gray-700" />
       {count > 0 && (

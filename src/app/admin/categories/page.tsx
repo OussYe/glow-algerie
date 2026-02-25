@@ -15,8 +15,14 @@ import {
   PhotoIcon,
 } from '@heroicons/react/24/outline'
 
-type FormState = { name: string; description: string; image_url: string }
-const EMPTY: FormState = { name: '', description: '', image_url: '' }
+type FormState = {
+  name: string
+  name_ar: string
+  description: string
+  description_ar: string
+  image_url: string
+}
+const EMPTY: FormState = { name: '', name_ar: '', description: '', description_ar: '', image_url: '' }
 
 export default function AdminCategories() {
   const [categories, setCategories] = useState<Category[]>([])
@@ -39,7 +45,17 @@ export default function AdminCategories() {
   useEffect(() => { load() }, [])
 
   const openCreate = () => { setEditing(null); setForm(EMPTY); setShowForm(true) }
-  const openEdit = (cat: Category) => { setEditing(cat); setForm({ name: cat.name, description: cat.description || '', image_url: cat.image_url || '' }); setShowForm(true) }
+  const openEdit = (cat: Category) => {
+    setEditing(cat)
+    setForm({
+      name: cat.name,
+      name_ar: cat.name_ar || '',
+      description: cat.description || '',
+      description_ar: cat.description_ar || '',
+      image_url: cat.image_url || '',
+    })
+    setShowForm(true)
+  }
   const closeForm = () => { setShowForm(false); setEditing(null); setForm(EMPTY) }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,7 +82,9 @@ export default function AdminCategories() {
       if (editing) {
         const { error } = await supabase.from('categories').update({
           name: form.name.trim(),
+          name_ar: form.name_ar.trim() || null,
           description: form.description.trim() || null,
+          description_ar: form.description_ar.trim() || null,
           image_url: form.image_url || null,
         }).eq('id', editing.id)
         if (error) throw error
@@ -74,7 +92,9 @@ export default function AdminCategories() {
       } else {
         const { error } = await supabase.from('categories').insert({
           name: form.name.trim(),
+          name_ar: form.name_ar.trim() || null,
           description: form.description.trim() || null,
+          description_ar: form.description_ar.trim() || null,
           image_url: form.image_url || null,
         })
         if (error) throw error
@@ -197,7 +217,7 @@ export default function AdminCategories() {
             </div>
             <form onSubmit={handleSave} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nom (FR) *</label>
                 <input
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -206,7 +226,19 @@ export default function AdminCategories() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nom (AR) — <span className="font-normal text-gray-400">اسم بالعربية</span>
+                </label>
+                <input
+                  dir="rtl"
+                  value={form.name_ar}
+                  onChange={e => setForm(f => ({ ...f, name_ar: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
+                  placeholder="اسم الفئة بالعربية (اختياري)"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description (FR)</label>
                 <textarea
                   value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
@@ -216,10 +248,23 @@ export default function AdminCategories() {
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description (AR) — <span className="font-normal text-gray-400">وصف بالعربية</span>
+                </label>
+                <textarea
+                  dir="rtl"
+                  value={form.description_ar}
+                  onChange={e => setForm(f => ({ ...f, description_ar: e.target.value }))}
+                  rows={2}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
+                  placeholder="وصف بالعربية (اختياري)"
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Image</label>
                 {form.image_url ? (
-                  <div className="relative inline-block">
-                    <Image src={form.image_url} alt="" width={120} height={120} className="w-28 h-28 object-cover rounded-xl" />
+                  <div className="relative w-28 h-28 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                    <Image src={form.image_url} alt="" fill className="object-cover" />
                     <button
                       type="button"
                       onClick={() => setForm(f => ({ ...f, image_url: '' }))}

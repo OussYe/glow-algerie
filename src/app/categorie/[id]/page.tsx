@@ -3,9 +3,10 @@ import Header from '@/components/client/Header'
 import ProductCard from '@/components/client/ProductCard'
 import { ProductSkeleton } from '@/components/ui/LoadingSkeleton'
 import { Suspense } from 'react'
-import Link from 'next/link'
-import { ChevronLeftIcon } from '@heroicons/react/24/outline'
 import { notFound } from 'next/navigation'
+import Breadcrumb from '@/components/client/Breadcrumb'
+import CategoryHeader from '@/components/client/CategoryHeader'
+import ProductsEmptyState from '@/components/client/ProductsEmptyState'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -17,16 +18,11 @@ async function ProductsGrid({ categoryId }: { categoryId: string }) {
     .order('created_at', { ascending: false })
 
   if (error) {
-    return <div className="text-center py-10 text-gray-500">Erreur de chargement.</div>
+    return <ProductsEmptyState type="error" />
   }
 
   if (!products || products.length === 0) {
-    return (
-      <div className="text-center py-20">
-        <div className="text-6xl mb-4">📦</div>
-        <p className="text-gray-500">Aucun article dans cette catégorie pour le moment.</p>
-      </div>
-    )
+    return <ProductsEmptyState type="empty" />
   }
 
   return (
@@ -53,23 +49,17 @@ export default async function CategoryPage({ params }: Props) {
     <div className="min-h-screen">
       <Header />
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-          <Link href="/" className="hover:text-rose-500 transition flex items-center gap-1">
-            <ChevronLeftIcon className="w-4 h-4" />
-            Accueil
-          </Link>
-          <span>/</span>
-          <span className="text-gray-800 font-medium">{category.name}</span>
-        </div>
+        <Breadcrumb
+          label={category.name}
+          labelAr={category.name_ar}
+        />
 
-        {/* En-tête catégorie */}
-        <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{category.name}</h1>
-          {category.description && (
-            <p className="text-gray-500 mt-2 max-w-xl">{category.description}</p>
-          )}
-        </div>
+        <CategoryHeader
+          nameFr={category.name}
+          nameAr={category.name_ar}
+          descriptionFr={category.description}
+          descriptionAr={category.description_ar}
+        />
 
         {/* Produits */}
         <Suspense
