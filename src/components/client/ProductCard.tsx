@@ -7,19 +7,23 @@ import { formatPrice, getDiscountedPrice } from '@/lib/cart'
 import { useCart } from '@/context/CartContext'
 import toast from 'react-hot-toast'
 import { ShoppingCartIcon } from '@heroicons/react/24/outline'
+import { useTranslation } from '@/context/LanguageContext'
 
 type Props = { product: Product }
 
 export default function ProductCard({ product }: Props) {
   const { addToCart } = useCart()
+  const { t, lang } = useTranslation()
   const hasDiscount = product.discount_percent > 0
   const finalPrice = getDiscountedPrice(product.price, product.discount_percent)
   const mainImage = product.images?.[0]
 
+  const displayTitle = lang === 'ar' ? (product.title_ar || product.title) : product.title
+
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault()
     addToCart(product)
-    toast.success('Ajouté au panier', { duration: 1500 })
+    toast.success(t('addedToCart'), { duration: 1500 })
   }
 
   return (
@@ -31,7 +35,7 @@ export default function ProductCard({ product }: Props) {
         {mainImage ? (
           <Image
             src={mainImage}
-            alt={product.title}
+            alt={displayTitle}
             fill
             className="object-contain group-hover:scale-105 transition-transform duration-500"
           />
@@ -48,14 +52,14 @@ export default function ProductCard({ product }: Props) {
         {!product.in_stock && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
             <span className="bg-white text-gray-700 font-semibold text-sm px-3 py-1 rounded-full">
-              Rupture de stock
+              {t('outOfStock')}
             </span>
           </div>
         )}
       </div>
       <div className="p-4">
         <h3 className="font-medium text-gray-800 text-sm line-clamp-2 group-hover:text-rose-500 transition">
-          {product.title}
+          {displayTitle}
         </h3>
         <div className="mt-2 flex items-center justify-between gap-2">
           <div>
@@ -72,7 +76,7 @@ export default function ProductCard({ product }: Props) {
             <button
               onClick={handleAdd}
               className="p-2 rounded-full bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-500 transition"
-              aria-label="Ajouter au panier"
+              aria-label={t('addToCart')}
             >
               <ShoppingCartIcon className="w-4 h-4" />
             </button>

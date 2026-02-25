@@ -12,21 +12,27 @@ export type Database = {
         Row: {
           id: string
           name: string
+          name_ar: string | null
           description: string | null
+          description_ar: string | null
           image_url: string | null
           created_at: string
         }
         Insert: {
           id?: string
           name: string
+          name_ar?: string | null
           description?: string | null
+          description_ar?: string | null
           image_url?: string | null
           created_at?: string
         }
         Update: {
           id?: string
           name?: string
+          name_ar?: string | null
           description?: string | null
+          description_ar?: string | null
           image_url?: string | null
         }
       }
@@ -35,7 +41,9 @@ export type Database = {
           id: string
           category_id: string
           title: string
+          title_ar: string | null
           description: string | null
+          description_ar: string | null
           price: number
           discount_percent: number
           images: string[]
@@ -47,7 +55,9 @@ export type Database = {
           id?: string
           category_id: string
           title: string
+          title_ar?: string | null
           description?: string | null
+          description_ar?: string | null
           price: number
           discount_percent?: number
           images?: string[]
@@ -59,7 +69,9 @@ export type Database = {
           id?: string
           category_id?: string
           title?: string
+          title_ar?: string | null
           description?: string | null
+          description_ar?: string | null
           price?: number
           discount_percent?: number
           images?: string[]

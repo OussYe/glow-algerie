@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import CartIcon from './CartIcon'
+import LanguageToggle from './LanguageToggle'
 
 export default function Header() {
   return (
@@ -22,7 +23,10 @@ export default function Header() {
             <span className="font-bold text-xl text-rose-500 tracking-tight">Algérie</span>
           </div>
         </Link>
-        <CartIcon />
+        <div className="flex items-center gap-1">
+          <LanguageToggle />
+          <CartIcon />
+        </div>
       </div>
     </header>
   )

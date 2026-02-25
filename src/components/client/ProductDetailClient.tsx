@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Product } from '@/lib/supabase'
 import { formatPrice, getDiscountedPrice } from '@/lib/cart'
 import { useCart } from '@/context/CartContext'
+import { useTranslation } from '@/context/LanguageContext'
 import ImageLightbox, { LightboxItem } from '@/components/ui/ImageLightbox'
 import toast from 'react-hot-toast'
 import {
@@ -27,11 +28,16 @@ export default function ProductDetailClient({ product }: Props) {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [qty, setQty] = useState(1)
   const { addToCart } = useCart()
+  const { t, lang } = useTranslation()
 
   const hasDiscount = product.discount_percent > 0
   const finalPrice  = getDiscountedPrice(product.price, product.discount_percent)
   const images      = product.images || []
   const videos      = product.videos || []
+
+  // Titre et description dans la bonne langue
+  const displayTitle       = lang === 'ar' ? (product.title_ar || product.title) : product.title
+  const displayDescription = lang === 'ar' ? (product.description_ar || product.description) : product.description
 
   // Liste unifiée images + vidéos
   const mediaList: MediaItem[] = [
@@ -48,7 +54,7 @@ export default function ProductDetailClient({ product }: Props) {
 
   const handleAdd = () => {
     addToCart(product, qty)
-    toast.success(`${qty} article(s) ajouté(s) au panier`, { duration: 2000 })
+    toast.success(t('addedQtyToCart', { qty }), { duration: 2000 })
   }
 
   return (
@@ -71,7 +77,7 @@ export default function ProductDetailClient({ product }: Props) {
             <button
               onClick={openLightbox}
               className="absolute top-3 right-3 z-10 p-2 rounded-full bg-black/40 hover:bg-black/60 text-white transition"
-              title="Agrandir"
+              title={t('enlarge')}
             >
               <ArrowsPointingOutIcon className="w-4 h-4" />
             </button>
@@ -90,13 +96,13 @@ export default function ProductDetailClient({ product }: Props) {
             >
               <Image
                 src={selected.url}
-                alt={product.title}
+                alt={displayTitle}
                 fill
                 className="object-contain"
                 priority
               />
               <div className="absolute bottom-3 right-3 bg-black/40 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm pointer-events-none">
-                🔍 Cliquer pour agrandir
+                {t('clickToEnlarge')}
               </div>
             </div>
           )}
@@ -151,17 +157,17 @@ export default function ProductDetailClient({ product }: Props) {
       <div className="space-y-5">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
-            {product.title}
+            {displayTitle}
           </h1>
           {!product.in_stock && (
             <span className="inline-block mt-2 bg-gray-100 text-gray-500 text-sm px-3 py-1 rounded-full">
-              Rupture de stock
+              {t('outOfStock')}
             </span>
           )}
           {product.in_stock && (
             <span className="inline-flex items-center gap-1 mt-2 text-emerald-600 text-sm font-medium">
               <CheckBadgeIcon className="w-4 h-4" />
-              En stock
+              {t('inStock')}
             </span>
           )}
         </div>
@@ -178,7 +184,7 @@ export default function ProductDetailClient({ product }: Props) {
                   {formatPrice(product.price)}
                 </span>
                 <span className="bg-rose-500 text-white text-sm font-bold px-2 py-0.5 rounded-lg">
-                  Économie {formatPrice(product.price - finalPrice)}
+                  {t('savings', { amount: formatPrice(product.price - finalPrice) })}
                 </span>
               </>
             )}
@@ -186,11 +192,11 @@ export default function ProductDetailClient({ product }: Props) {
         </div>
 
         {/* Description */}
-        {product.description && (
+        {displayDescription && (
           <div>
-            <h2 className="font-semibold text-gray-700 mb-2">Description</h2>
+            <h2 className="font-semibold text-gray-700 mb-2">{t('description')}</h2>
             <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
-              {product.description}
+              {displayDescription}
             </p>
           </div>
         )}
@@ -199,7 +205,7 @@ export default function ProductDetailClient({ product }: Props) {
         {product.in_stock && (
           <div className="space-y-3 pt-2">
             <div className="flex items-center gap-4">
-              <span className="text-gray-700 font-medium">Quantité :</span>
+              <span className="text-gray-700 font-medium">{t('quantity')}</span>
               <div className="flex items-center gap-3 bg-gray-100 rounded-xl px-3 py-2">
                 <button
                   onClick={() => setQty(q => Math.max(1, q - 1))}
@@ -222,16 +228,16 @@ export default function ProductDetailClient({ product }: Props) {
               className="w-full bg-rose-500 hover:bg-rose-600 text-white font-semibold py-4 rounded-2xl flex items-center justify-center gap-3 transition text-lg shadow-lg shadow-rose-200 hover:shadow-rose-300 active:scale-[0.98]"
             >
               <ShoppingCartIcon className="w-5 h-5" />
-              Ajouter au panier
+              {t('addToCart')}
             </button>
           </div>
         )}
 
         {/* Info livraison */}
         <div className="border border-gray-100 rounded-2xl p-4 space-y-2 text-sm text-gray-600">
-          <div className="flex items-center gap-2">🚚 <span>Livraison disponible partout en Algérie</span></div>
-          <div className="flex items-center gap-2">🔒 <span>Paiement à la livraison (cash)</span></div>
-          <div className="flex items-center gap-2">⭐ <span>Qualité garantie</span></div>
+          <div className="flex items-center gap-2"><span>{t('deliveryInfo')}</span></div>
+          <div className="flex items-center gap-2"><span>{t('paymentInfo')}</span></div>
+          <div className="flex items-center gap-2"><span>{t('qualityInfo')}</span></div>
         </div>
       </div>
 

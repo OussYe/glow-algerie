@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import Header from '@/components/client/Header'
 import { useCart } from '@/context/CartContext'
+import { useTranslation } from '@/context/LanguageContext'
 import { formatPrice, getDiscountedPrice } from '@/lib/cart'
 import { supabase, OrderItem } from '@/lib/supabase'
 import {
@@ -49,6 +50,7 @@ type FormData = {
 
 export default function CartPage() {
   const { items, total, updateQuantity, removeFromCart, clearCart } = useCart()
+  const { t } = useTranslation()
   const router = useRouter()
 
   // ── Ecotrack state ──────────────────────────────────────────────
@@ -80,12 +82,13 @@ export default function CartPage() {
         // Les frais sont sous "livraison", "data", ou directement un tableau
         setAllFees(fRes?.livraison || fRes?.data || fRes || [])
       } catch {
-        toast.error('Erreur chargement des wilayas')
+        toast.error(t('loadingWilayasError'))
       } finally {
         setLoadingWilayas(false)
       }
     }
     init()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ── Changement de wilaya → communes + tarif ─────────────────────
@@ -118,7 +121,7 @@ export default function CartPage() {
       const res = await fetch(`/api/ecotrack/communes/${wilayaId}`).then(r => r.json())
       setCommunes(res?.data || res || [])
     } catch {
-      toast.error('Erreur chargement des communes')
+      toast.error(t('loadingCommunesError'))
     } finally {
       setLoadingCommunes(false)
     }
@@ -137,12 +140,12 @@ export default function CartPage() {
   // ── Validation ──────────────────────────────────────────────────
   const validate = () => {
     const e: Partial<Record<keyof FormData, string>> = {}
-    if (!form.full_name.trim()) e.full_name = 'Nom requis'
-    if (!form.phone.trim())     e.phone = 'Téléphone requis'
+    if (!form.full_name.trim()) e.full_name = t('nameRequired')
+    if (!form.phone.trim())     e.phone = t('phoneRequired')
     else if (!/^(0[5-7]\d{8})$/.test(form.phone.replace(/\s/g, '')))
-      e.phone = 'Numéro invalide (ex: 0550123456)'
-    if (!form.wilayaId)         e.wilaya = 'Wilaya requise'
-    if (!form.commune)          e.commune = 'Commune requise'
+      e.phone = t('phoneInvalid')
+    if (!form.wilayaId)         e.wilaya = t('wilayaRequired')
+    if (!form.commune)          e.commune = t('communeRequired')
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -151,7 +154,7 @@ export default function CartPage() {
   const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault()
     if (!validate()) return
-    if (items.length === 0) { toast.error('Votre panier est vide'); return }
+    if (items.length === 0) { toast.error(t('cartEmpty')); return }
 
     setSubmitting(true)
     try {
@@ -182,7 +185,7 @@ export default function CartPage() {
       router.push(`/confirmation?id=${data.id}`)
     } catch (err) {
       console.error(err)
-      toast.error("Erreur lors de l'envoi. Veuillez réessayer.")
+      toast.error(t('sendingError'))
     } finally {
       setSubmitting(false)
     }
@@ -195,14 +198,14 @@ export default function CartPage() {
         <Header />
         <main className="max-w-2xl mx-auto px-4 py-20 text-center">
           <ShoppingBagIcon className="w-20 h-20 text-gray-200 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Votre panier est vide</h1>
-          <p className="text-gray-500 mb-8">Ajoutez des articles pour commencer.</p>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">{t('cartEmpty')}</h1>
+          <p className="text-gray-500 mb-8">{t('cartEmptyHint')}</p>
           <Link
             href="/"
             className="inline-flex items-center gap-2 bg-rose-500 text-white px-6 py-3 rounded-2xl font-semibold hover:bg-rose-600 transition"
           >
             <ArrowLeftIcon className="w-4 h-4" />
-            Continuer les achats
+            {t('continueShopping')}
           </Link>
         </main>
       </div>
@@ -215,6 +218,7 @@ export default function CartPage() {
     }`
 
   const totalWithDelivery = total + (deliveryFee ?? 0)
+  const totalQty = items.reduce((s, i) => s + i.quantity, 0)
 
   return (
     <div className="min-h-screen">
@@ -225,9 +229,9 @@ export default function CartPage() {
           <Link href="/" className="text-gray-400 hover:text-rose-500 transition">
             <ArrowLeftIcon className="w-5 h-5" />
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Mon Panier</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('myCart')}</h1>
           <span className="bg-rose-100 text-rose-600 text-sm font-semibold px-2 py-0.5 rounded-full">
-            {items.length} article{items.length > 1 ? 's' : ''}
+            {t('productCount', { count: items.length, s: items.length > 1 ? 's' : '' })}
           </span>
         </div>
 
@@ -279,17 +283,17 @@ export default function CartPage() {
             {/* Récapitulatif */}
             <div className="bg-rose-50 rounded-2xl p-4 border border-rose-100 space-y-2">
               <div className="flex justify-between text-sm text-gray-600">
-                <span>Sous-total ({items.reduce((s, i) => s + i.quantity, 0)} article{items.reduce((s, i) => s + i.quantity, 0) > 1 ? 's' : ''})</span>
+                <span>{t('subtotal', { count: totalQty, s: totalQty > 1 ? 's' : '' })}</span>
                 <span className="font-semibold">{formatPrice(total)}</span>
               </div>
               <div className="flex justify-between text-sm text-gray-600">
-                <span className="flex items-center gap-1"><TruckIcon className="w-4 h-4" /> Livraison</span>
+                <span className="flex items-center gap-1"><TruckIcon className="w-4 h-4" /> {t('delivery')}</span>
                 <span className={`font-semibold ${deliveryFee !== null ? 'text-emerald-600' : 'text-gray-400'}`}>
-                  {deliveryFee === null ? '— sélectionnez une wilaya' : deliveryFee === 0 ? 'Gratuit' : formatPrice(deliveryFee)}
+                  {deliveryFee === null ? t('selectWilaya') : deliveryFee === 0 ? t('freeDelivery') : formatPrice(deliveryFee)}
                 </span>
               </div>
               <div className="pt-2 border-t border-rose-200 flex justify-between items-center">
-                <span className="font-semibold text-gray-800">Total TTC</span>
+                <span className="font-semibold text-gray-800">{t('totalTTC')}</span>
                 <span className="text-2xl font-bold text-gray-900">{formatPrice(totalWithDelivery)}</span>
               </div>
             </div>
@@ -298,27 +302,27 @@ export default function CartPage() {
           {/* ── Formulaire ───────────────────────────────── */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-24">
-              <h2 className="text-lg font-bold text-gray-900 mb-5">Informations de livraison</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-5">{t('deliveryInfoSection')}</h2>
 
               <form onSubmit={handleSubmit} className="space-y-4">
 
                 {/* Nom complet */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet *</label>
-                  <input name="full_name" value={form.full_name} onChange={handleChange} placeholder="Prénom et nom" className={fieldClass('full_name')} />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('fullName')}</label>
+                  <input name="full_name" value={form.full_name} onChange={handleChange} placeholder={t('fullNamePlaceholder')} className={fieldClass('full_name')} />
                   {errors.full_name && <p className="text-red-500 text-xs mt-1">{errors.full_name}</p>}
                 </div>
 
                 {/* Téléphone */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone *</label>
-                  <input name="phone" value={form.phone} onChange={handleChange} placeholder="0550 123 456" className={fieldClass('phone')} />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('phone')}</label>
+                  <input name="phone" value={form.phone} onChange={handleChange} placeholder={t('phonePlaceholder')} className={fieldClass('phone')} />
                   {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                 </div>
 
                 {/* Wilaya */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Wilaya *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('wilaya')}</label>
                   <select
                     value={form.wilayaId}
                     onChange={handleWilayaChange}
@@ -326,7 +330,7 @@ export default function CartPage() {
                     className={`${fieldClass('wilaya')} disabled:opacity-60 disabled:cursor-wait`}
                   >
                     <option value="">
-                      {loadingWilayas ? 'Chargement...' : 'Sélectionner une wilaya...'}
+                      {loadingWilayas ? t('loading') : t('wilayaPlaceholder')}
                     </option>
                     {wilayas.map(w => (
                       <option key={wId(w)} value={String(wId(w))}>
@@ -339,7 +343,7 @@ export default function CartPage() {
 
                 {/* Commune */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Commune *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('commune')}</label>
                   <select
                     name="commune"
                     value={form.commune}
@@ -348,7 +352,7 @@ export default function CartPage() {
                     className={`${fieldClass('commune')} disabled:opacity-60 disabled:cursor-wait`}
                   >
                     <option value="">
-                      {!form.wilayaId ? "Sélectionnez d'abord une wilaya" : loadingCommunes ? 'Chargement...' : 'Sélectionner une commune...'}
+                      {!form.wilayaId ? t('communeDisabled') : loadingCommunes ? t('loading') : t('communePlaceholder')}
                     </option>
                     {communes.map((c, i) => (
                       <option key={c.commune_id ?? c.id ?? i} value={cName(c)}>
@@ -361,24 +365,24 @@ export default function CartPage() {
 
                 {/* Notes */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optionnel)</label>
-                  <textarea name="notes" value={form.notes} onChange={handleChange} placeholder="Instructions spéciales..." rows={2} className={fieldClass('notes')} />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('notes')}</label>
+                  <textarea name="notes" value={form.notes} onChange={handleChange} placeholder={t('notesPlaceholder')} rows={2} className={fieldClass('notes')} />
                 </div>
 
                 {/* Récapitulatif dans le formulaire */}
                 <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm border border-gray-100">
                   <div className="flex justify-between text-gray-600">
-                    <span>Sous-total</span>
+                    <span>{t('subtotalLabel')}</span>
                     <span className="font-medium">{formatPrice(total)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
-                    <span className="flex items-center gap-1"><TruckIcon className="w-3.5 h-3.5" /> Livraison</span>
+                    <span className="flex items-center gap-1"><TruckIcon className="w-3.5 h-3.5" /> {t('delivery')}</span>
                     <span className={`font-medium ${deliveryFee !== null ? 'text-emerald-600' : 'text-gray-400'}`}>
-                      {deliveryFee === null ? '—' : deliveryFee === 0 ? 'Gratuit' : formatPrice(deliveryFee)}
+                      {deliveryFee === null ? '—' : deliveryFee === 0 ? t('freeDelivery') : formatPrice(deliveryFee)}
                     </span>
                   </div>
                   <div className="flex justify-between font-bold text-gray-900 pt-1 border-t border-gray-200">
-                    <span>Total à payer</span>
+                    <span>{t('totalToPay')}</span>
                     <span className="text-rose-600">{formatPrice(totalWithDelivery)}</span>
                   </div>
                 </div>
@@ -390,9 +394,9 @@ export default function CartPage() {
                   className="w-full bg-rose-500 hover:bg-rose-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl transition text-base shadow-lg shadow-rose-200 flex items-center justify-center gap-2"
                 >
                   {submitting ? (
-                    <><div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />Envoi en cours...</>
+                    <><div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />{t('sending')}</>
                   ) : (
-                    <>🛒 Passer la commande</>
+                    <>{t('placeOrder')}</>
                   )}
                 </button>
 

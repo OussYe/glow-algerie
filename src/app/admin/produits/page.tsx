@@ -14,14 +14,21 @@ import {
 } from '@heroicons/react/24/outline'
 
 type FormState = {
-  category_id: string; title: string; description: string
-  price: string; discount_percent: string; in_stock: boolean
-  images: string[]; videos: string[]
+  category_id: string
+  title: string
+  title_ar: string
+  description: string
+  description_ar: string
+  price: string
+  discount_percent: string
+  in_stock: boolean
+  images: string[]
+  videos: string[]
 }
 
 const EMPTY: FormState = {
-  category_id: '', title: '', description: '', price: '',
-  discount_percent: '0', in_stock: true, images: [], videos: [],
+  category_id: '', title: '', title_ar: '', description: '', description_ar: '',
+  price: '', discount_percent: '0', in_stock: true, images: [], videos: [],
 }
 
 export default function AdminProduits() {
@@ -65,7 +72,9 @@ export default function AdminProduits() {
     setForm({
       category_id: p.category_id,
       title: p.title,
+      title_ar: p.title_ar || '',
       description: p.description || '',
+      description_ar: p.description_ar || '',
       price: String(p.price),
       discount_percent: String(p.discount_percent),
       in_stock: p.in_stock,
@@ -133,7 +142,9 @@ export default function AdminProduits() {
       const payload = {
         category_id: form.category_id,
         title: form.title.trim(),
+        title_ar: form.title_ar.trim() || null,
         description: form.description.trim() || null,
+        description_ar: form.description_ar.trim() || null,
         price: Number(form.price),
         discount_percent: Number(form.discount_percent) || 0,
         in_stock: form.in_stock,
@@ -304,9 +315,9 @@ export default function AdminProduits() {
                   {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-              {/* Titre */}
+              {/* Titre FR */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Titre *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Titre (FR) *</label>
                 <input
                   value={form.title}
                   onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
@@ -314,15 +325,42 @@ export default function AdminProduits() {
                   placeholder="Nom du produit"
                 />
               </div>
-              {/* Description */}
+              {/* Titre AR */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Titre (AR) — <span className="font-normal text-gray-400">عنوان بالعربية</span>
+                </label>
+                <input
+                  dir="rtl"
+                  value={form.title_ar}
+                  onChange={e => setForm(f => ({ ...f, title_ar: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
+                  placeholder="اسم المنتج بالعربية (اختياري)"
+                />
+              </div>
+              {/* Description FR */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description (FR)</label>
                 <textarea
                   value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                   rows={3}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
                   placeholder="Description du produit..."
+                />
+              </div>
+              {/* Description AR */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description (AR) — <span className="font-normal text-gray-400">وصف بالعربية</span>
+                </label>
+                <textarea
+                  dir="rtl"
+                  value={form.description_ar}
+                  onChange={e => setForm(f => ({ ...f, description_ar: e.target.value }))}
+                  rows={3}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
+                  placeholder="وصف المنتج بالعربية (اختياري)"
                 />
               </div>
               {/* Prix + Réduction */}
@@ -370,8 +408,8 @@ export default function AdminProduits() {
                 </label>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {form.images.map((img, i) => (
-                    <div key={i} className="relative">
-                      <Image src={img} alt="" width={72} height={72} className="w-18 h-18 rounded-xl object-cover" />
+                    <div key={i} className="relative w-[72px] h-[72px] rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                      <Image src={img} alt="" fill className="object-cover" />
                       <button
                         type="button"
                         onClick={() => removeImage(img)}

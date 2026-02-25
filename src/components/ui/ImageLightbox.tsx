@@ -9,6 +9,7 @@ import {
   PlayIcon,
 } from '@heroicons/react/24/outline'
 import { MagnifyingGlassPlusIcon, MagnifyingGlassMinusIcon } from '@heroicons/react/24/outline'
+import { useTranslation } from '@/context/LanguageContext'
 
 export type LightboxItem = { type: 'image' | 'video'; url: string }
 
@@ -21,6 +22,7 @@ type Props = {
 export default function ImageLightbox({ media, initialIndex = 0, onClose }: Props) {
   const [current, setCurrent] = useState(initialIndex)
   const [zoom, setZoom]       = useState(1)
+  const { t } = useTranslation()
   const [pan, setPan]         = useState({ x: 0, y: 0 })
   const [dragging, setDragging]   = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
@@ -116,7 +118,7 @@ export default function ImageLightbox({ media, initialIndex = 0, onClose }: Prop
           }}>
             <Image
               src={item.url}
-              alt={`Média ${current + 1}`}
+              alt={t('mediaAlt', { n: current + 1 })}
               width={1200}
               height={900}
               className="max-h-[80vh] max-w-[90vw] object-contain select-none"
