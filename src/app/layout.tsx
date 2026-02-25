@@ -9,6 +9,11 @@ const geist = Geist({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Glow Algérie – Beauté & Lifestyle',
   description: 'Découvrez notre collection de produits de beauté et lifestyle',
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+    shortcut: '/logo.png',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

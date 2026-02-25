@@ -1,82 +1,41 @@
 import { supabase } from '@/lib/supabase'
 import Header from '@/components/client/Header'
-import CategoryCard from '@/components/client/CategoryCard'
-import { CategorySkeleton } from '@/components/ui/LoadingSkeleton'
-import { Suspense } from 'react'
+import HomeClient from '@/components/client/HomeClient'
 import { SparklesIcon } from '@heroicons/react/24/solid'
 
-async function CategoriesGrid() {
-  const { data: categories, error } = await supabase
-    .from('categories')
-    .select('*')
-    .order('created_at', { ascending: true })
-
-  if (error) {
-    return (
-      <div className="text-center py-16 text-gray-500">
-        Erreur lors du chargement des catégories. Veuillez réessayer.
-      </div>
-    )
-  }
-
-  if (!categories || categories.length === 0) {
-    return (
-      <div className="text-center py-20">
-        <div className="text-6xl mb-4">🛍️</div>
-        <p className="text-gray-500 text-lg">Aucune catégorie disponible pour le moment.</p>
-      </div>
-    )
-  }
+export default async function HomePage() {
+  const [{ data: categories }, { data: products }] = await Promise.all([
+    supabase.from('categories').select('*').order('created_at', { ascending: true }),
+    supabase.from('products').select('*').order('created_at', { ascending: false }),
+  ])
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-      {categories.map((cat) => (
-        <CategoryCard key={cat.id} category={cat} />
-      ))}
-    </div>
-  )
-}
-
-function CategoriesLoading() {
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-      {Array.from({ length: 8 }).map((_, i) => <CategorySkeleton key={i} />)}
-    </div>
-  )
-}
-
-export default function HomePage() {
-  return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50">
       <Header />
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-rose-50 via-pink-50 to-white py-12 px-4">
-        <div className="max-w-6xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-rose-100 text-rose-600 px-4 py-1.5 rounded-full text-sm font-medium mb-4">
+      <section className="bg-gradient-to-br from-rose-50 via-pink-50 to-white py-10 px-4 border-b border-rose-100">
+        <div className="max-w-7xl mx-auto flex flex-col items-center text-center">
+          <div className="inline-flex items-center gap-2 bg-rose-100 text-rose-600 px-4 py-1.5 rounded-full text-sm font-medium mb-3">
             <SparklesIcon className="w-4 h-4" />
             Livraison partout en Algérie
           </div>
-          <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4">
+          <h1 className="text-2xl md:text-4xl font-bold text-gray-900">
             Découvrez notre boutique
           </h1>
-          <p className="text-gray-600 text-lg max-w-xl mx-auto">
-            Des produits soigneusement sélectionnés pour vous. Qualité garantie, livraison rapide.
+          <p className="text-gray-500 mt-1 text-sm md:text-base max-w-lg">
+            Des produits soigneusement sélectionnés. Qualité garantie, livraison rapide.
           </p>
         </div>
       </section>
 
-      {/* Catégories */}
-      <main className="max-w-6xl mx-auto px-4 py-10">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">Nos Catégories</h2>
-        </div>
-        <Suspense fallback={<CategoriesLoading />}>
-          <CategoriesGrid />
-        </Suspense>
-      </main>
+      {/* Layout sidebar + produits */}
+      <HomeClient
+        categories={categories || []}
+        products={products || []}
+      />
 
-      <footer className="mt-16 border-t border-gray-100 py-8 text-center text-gray-400 text-sm">
+      <footer className="mt-10 border-t border-gray-100 py-8 text-center text-gray-400 text-sm bg-white">
         <p>© 2024 Glow Algérie. Tous droits réservés.</p>
       </footer>
     </div>

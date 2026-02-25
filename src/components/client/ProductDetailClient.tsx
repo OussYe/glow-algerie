@@ -5,34 +5,46 @@ import Image from 'next/image'
 import { Product } from '@/lib/supabase'
 import { formatPrice, getDiscountedPrice } from '@/lib/cart'
 import { useCart } from '@/context/CartContext'
-import ImageLightbox from '@/components/ui/ImageLightbox'
+import ImageLightbox, { LightboxItem } from '@/components/ui/ImageLightbox'
 import toast from 'react-hot-toast'
 import {
   ShoppingCartIcon,
   MinusIcon,
   PlusIcon,
   PlayIcon,
+  ArrowsPointingOutIcon,
 } from '@heroicons/react/24/outline'
 import { CheckBadgeIcon } from '@heroicons/react/24/solid'
 
 type Props = { product: Product }
 
+type MediaItem =
+  | { type: 'image'; url: string; imgIndex: number }
+  | { type: 'video'; url: string }
+
 export default function ProductDetailClient({ product }: Props) {
-  const [mainImageIdx, setMainImageIdx] = useState(0)
+  const [selectedIdx, setSelectedIdx] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
-  const [lightboxIdx, setLightboxIdx] = useState(0)
   const [qty, setQty] = useState(1)
   const { addToCart } = useCart()
 
   const hasDiscount = product.discount_percent > 0
-  const finalPrice = getDiscountedPrice(product.price, product.discount_percent)
-  const images = product.images || []
-  const videos = product.videos || []
+  const finalPrice  = getDiscountedPrice(product.price, product.discount_percent)
+  const images      = product.images || []
+  const videos      = product.videos || []
 
-  const openLightbox = (idx: number) => {
-    setLightboxIdx(idx)
-    setLightboxOpen(true)
-  }
+  // Liste unifiée images + vidéos
+  const mediaList: MediaItem[] = [
+    ...images.map((url, i) => ({ type: 'image' as const, url, imgIndex: i })),
+    ...videos.map((url)      => ({ type: 'video' as const, url })),
+  ]
+
+  // Pour la lightbox : même liste au format LightboxItem
+  const lightboxMedia: LightboxItem[] = mediaList.map(m => ({ type: m.type, url: m.url }))
+
+  const selected = mediaList[selectedIdx]
+
+  const openLightbox = () => setLightboxOpen(true)
 
   const handleAdd = () => {
     addToCart(product, qty)
@@ -41,74 +53,101 @@ export default function ProductDetailClient({ product }: Props) {
 
   return (
     <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-      {/* Galerie */}
+      {/* ── Galerie ── */}
       <div className="space-y-3">
-        {/* Image principale */}
-        <div
-          className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 cursor-zoom-in"
-          onClick={() => images.length > 0 && openLightbox(mainImageIdx)}
-        >
-          {images.length > 0 ? (
-            <Image
-              src={images[mainImageIdx]}
-              alt={product.title}
-              fill
-              className="object-cover hover:scale-105 transition-transform duration-500"
-              priority
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-8xl">📦</div>
-          )}
+
+        {/* Zone principale — taille FIXE aspect-square */}
+        <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-50 border border-gray-100">
+
+          {/* Badge promo */}
           {hasDiscount && (
-            <div className="absolute top-3 left-3 bg-rose-500 text-white text-sm font-bold px-3 py-1 rounded-full">
+            <div className="absolute top-3 left-3 z-10 bg-rose-500 text-white text-sm font-bold px-3 py-1 rounded-full">
               -{product.discount_percent}%
             </div>
           )}
-          {images.length > 0 && (
-            <div className="absolute bottom-3 right-3 bg-black/40 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
-              🔍 Cliquer pour agrandir
+
+          {/* Bouton agrandir */}
+          {selected && (
+            <button
+              onClick={openLightbox}
+              className="absolute top-3 right-3 z-10 p-2 rounded-full bg-black/40 hover:bg-black/60 text-white transition"
+              title="Agrandir"
+            >
+              <ArrowsPointingOutIcon className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Pas de média */}
+          {!selected && (
+            <div className="w-full h-full flex items-center justify-center text-8xl">📦</div>
+          )}
+
+          {/* Image */}
+          {selected?.type === 'image' && (
+            <div
+              className="w-full h-full cursor-zoom-in"
+              onClick={openLightbox}
+            >
+              <Image
+                src={selected.url}
+                alt={product.title}
+                fill
+                className="object-contain"
+                priority
+              />
+              <div className="absolute bottom-3 right-3 bg-black/40 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm pointer-events-none">
+                🔍 Cliquer pour agrandir
+              </div>
+            </div>
+          )}
+
+          {/* Vidéo — conteneur fixe aspect-square, vidéo en 16:9 centrée */}
+          {selected?.type === 'video' && (
+            <div className="w-full h-full flex items-center justify-center bg-black">
+              <video
+                key={selected.url}
+                src={selected.url}
+                controls
+                className="w-full max-h-full object-contain"
+                preload="metadata"
+              />
             </div>
           )}
         </div>
 
-        {/* Thumbnails */}
-        {images.length > 1 && (
+        {/* Miniatures unifiées */}
+        {mediaList.length > 1 && (
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {images.map((img, i) => (
+            {mediaList.map((media, i) => (
               <button
                 key={i}
-                onClick={() => setMainImageIdx(i)}
+                onClick={() => setSelectedIdx(i)}
                 className={`flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition ${
-                  i === mainImageIdx ? 'border-rose-400' : 'border-gray-200 hover:border-gray-400'
+                  i === selectedIdx
+                    ? 'border-rose-400 ring-2 ring-rose-200'
+                    : 'border-gray-200 hover:border-gray-400'
                 }`}
               >
-                <Image src={img} alt="" width={64} height={64} className="w-full h-full object-cover" />
+                {media.type === 'image' ? (
+                  <Image
+                    src={media.url}
+                    alt=""
+                    width={64}
+                    height={64}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                    <PlayIcon className="w-7 h-7 text-white drop-shadow" />
+                  </div>
+                )}
               </button>
-            ))}
-          </div>
-        )}
-
-        {/* Vidéos */}
-        {videos.length > 0 && (
-          <div className="space-y-3">
-            <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-              <PlayIcon className="w-4 h-4 text-rose-500" />
-              Vidéos du produit
-            </h3>
-            {videos.map((vid, i) => (
-              <video
-                key={i}
-                src={vid}
-                controls
-                className="w-full rounded-xl bg-black max-h-64"
-                preload="metadata"
-              />
             ))}
           </div>
         )}
       </div>
 
-      {/* Infos produit */}
+      {/* ── Infos produit ── */}
       <div className="space-y-5">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
@@ -129,7 +168,7 @@ export default function ProductDetailClient({ product }: Props) {
 
         {/* Prix */}
         <div className="bg-rose-50 rounded-2xl p-4">
-          <div className="flex items-baseline gap-3">
+          <div className="flex items-baseline gap-3 flex-wrap">
             <span className="text-3xl font-bold text-gray-900">
               {formatPrice(finalPrice)}
             </span>
@@ -196,11 +235,11 @@ export default function ProductDetailClient({ product }: Props) {
         </div>
       </div>
 
-      {/* Lightbox */}
-      {lightboxOpen && images.length > 0 && (
+      {/* Lightbox (images + vidéos) */}
+      {lightboxOpen && lightboxMedia.length > 0 && (
         <ImageLightbox
-          images={images}
-          initialIndex={lightboxIdx}
+          media={lightboxMedia}
+          initialIndex={selectedIdx}
           onClose={() => setLightboxOpen(false)}
         />
       )}

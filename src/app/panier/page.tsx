@@ -1,104 +1,194 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import Header from '@/components/client/Header'
 import { useCart } from '@/context/CartContext'
 import { formatPrice, getDiscountedPrice } from '@/lib/cart'
 import { supabase, OrderItem } from '@/lib/supabase'
-import { WILAYAS } from '@/lib/wilayas'
 import {
   TrashIcon,
   MinusIcon,
   PlusIcon,
   ShoppingBagIcon,
   ArrowLeftIcon,
+  TruckIcon,
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 
+// ── Types (calqués sur les vrais champs Ecotrack) ───────────────────
+type EcoWilaya = {
+  wilaya_id?: number; id?: number
+  wilaya_name?: string; name?: string
+}
+type EcoCommune = {
+  commune_id?: number; id?: number; code_postal?: string
+  commune_name?: string; name?: string; nom?: string
+}
+type EcoFee = {
+  wilaya_id: number
+  tarif?: string | number
+  [key: string]: unknown
+}
+
+// helpers
+const wId   = (w: EcoWilaya)  => w.wilaya_id  ?? w.id  ?? 0
+const wName = (w: EcoWilaya)  => w.wilaya_name ?? w.name ?? ''
+const cName = (c: EcoCommune) => c.commune_name ?? c.name ?? c.nom ?? ''
+
 type FormData = {
   full_name: string
-  phone: string
-  wilaya: string
-  commune: string
-  address: string
-  notes: string
+  phone:     string
+  wilaya:    string   // "id - name" — enregistré en base
+  wilayaId:  string   // id numérique pour les appels API
+  commune:   string
+  notes:     string
 }
 
 export default function CartPage() {
   const { items, total, updateQuantity, removeFromCart, clearCart } = useCart()
   const router = useRouter()
+
+  // ── Ecotrack state ──────────────────────────────────────────────
+  const [wilayas,         setWilayas]         = useState<EcoWilaya[]>([])
+  const [communes,        setCommunes]        = useState<EcoCommune[]>([])
+  const [allFees,         setAllFees]         = useState<EcoFee[]>([])
+  const [deliveryFee,     setDeliveryFee]     = useState<number | null>(null)
+  const [loadingWilayas,  setLoadingWilayas]  = useState(true)
+  const [loadingCommunes, setLoadingCommunes] = useState(false)
+
+  // ── Form state ──────────────────────────────────────────────────
   const [form, setForm] = useState<FormData>({
-    full_name: '', phone: '', wilaya: '', commune: '', address: '', notes: '',
+    full_name: '', phone: '', wilaya: '', wilayaId: '', commune: '', notes: '',
   })
   const [submitting, setSubmitting] = useState(false)
-  const [errors, setErrors] = useState<Partial<FormData>>({})
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  // ── Chargement wilays + tarifs au montage ────────────────────────
+  useEffect(() => {
+    const init = async () => {
+      setLoadingWilayas(true)
+      try {
+        const [wRes, fRes] = await Promise.all([
+          fetch('/api/ecotrack/wilayas').then(r => r.json()),
+          fetch('/api/ecotrack/fees').then(r => r.json()),
+        ])
+        // L'API peut renvoyer { data: [...] } ou directement [...]
+        setWilayas(wRes?.data || wRes || [])
+        // Les frais sont sous "livraison", "data", ou directement un tableau
+        setAllFees(fRes?.livraison || fRes?.data || fRes || [])
+      } catch {
+        toast.error('Erreur chargement des wilayas')
+      } finally {
+        setLoadingWilayas(false)
+      }
+    }
+    init()
+  }, [])
+
+  // ── Changement de wilaya → communes + tarif ─────────────────────
+  const handleWilayaChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const wilayaId = e.target.value   // juste l'id numérique
+
+    if (!wilayaId) {
+      setForm(f => ({ ...f, wilaya: '', wilayaId: '', commune: '' }))
+      setCommunes([])
+      setDeliveryFee(null)
+      return
+    }
+
+    // Récupérer le nom depuis la liste déjà chargée
+    const found = wilayas.find(w => String(wId(w)) === wilayaId)
+    const label = found ? `${wilayaId} - ${wName(found)}` : wilayaId
+
+    setForm(f => ({ ...f, wilaya: label, wilayaId: wilayaId, commune: '' }))
+    setErrors(prev => ({ ...prev, wilaya: '', commune: '' }))
+
+    // Tarif de livraison (champ "tarif", défaut 600 DA)
+    const feeObj = allFees.find(f => String(f.wilaya_id) === wilayaId)
+    const tarif = feeObj?.tarif ? parseFloat(String(feeObj.tarif)) : 600
+    setDeliveryFee(tarif)
+
+    // Communes via proxy
+    setLoadingCommunes(true)
+    setCommunes([])
+    try {
+      const res = await fetch(`/api/ecotrack/communes/${wilayaId}`).then(r => r.json())
+      setCommunes(res?.data || res || [])
+    } catch {
+      toast.error('Erreur chargement des communes')
+    } finally {
+      setLoadingCommunes(false)
+    }
+  }
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target
     setForm(f => ({ ...f, [name]: value }))
     if (errors[name as keyof FormData]) {
-      setErrors(e => ({ ...e, [name]: '' }))
+      setErrors(prev => ({ ...prev, [name]: '' }))
     }
   }
 
+  // ── Validation ──────────────────────────────────────────────────
   const validate = () => {
-    const newErrors: Partial<FormData> = {}
-    if (!form.full_name.trim()) newErrors.full_name = 'Nom requis'
-    if (!form.phone.trim()) newErrors.phone = 'Téléphone requis'
+    const e: Partial<Record<keyof FormData, string>> = {}
+    if (!form.full_name.trim()) e.full_name = 'Nom requis'
+    if (!form.phone.trim())     e.phone = 'Téléphone requis'
     else if (!/^(0[5-7]\d{8})$/.test(form.phone.replace(/\s/g, '')))
-      newErrors.phone = 'Numéro invalide (ex: 0550123456)'
-    if (!form.wilaya) newErrors.wilaya = 'Wilaya requise'
-    if (!form.commune.trim()) newErrors.commune = 'Commune requise'
-    if (!form.address.trim()) newErrors.address = 'Adresse requise'
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+      e.phone = 'Numéro invalide (ex: 0550123456)'
+    if (!form.wilayaId)         e.wilaya = 'Wilaya requise'
+    if (!form.commune)          e.commune = 'Commune requise'
+    setErrors(e)
+    return Object.keys(e).length === 0
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  // ── Soumission ──────────────────────────────────────────────────
+  const handleSubmit = async (ev: React.FormEvent) => {
+    ev.preventDefault()
     if (!validate()) return
-    if (items.length === 0) {
-      toast.error('Votre panier est vide')
-      return
-    }
+    if (items.length === 0) { toast.error('Votre panier est vide'); return }
 
     setSubmitting(true)
     try {
       const orderItems: OrderItem[] = items.map(item => ({
         product_id: item.product.id,
-        title: item.product.title,
-        price: getDiscountedPrice(item.product.price, item.product.discount_percent),
-        quantity: item.quantity,
-        image: item.product.images?.[0] || '',
+        title:      item.product.title,
+        price:      getDiscountedPrice(item.product.price, item.product.discount_percent),
+        quantity:   item.quantity,
+        image:      item.product.images?.[0] || '',
       }))
 
+      const totalWithDelivery = total + (deliveryFee ?? 0)
+
       const { data, error } = await supabase.from('orders').insert({
-        full_name: form.full_name.trim(),
-        phone: form.phone.trim(),
-        wilaya: form.wilaya,
-        commune: form.commune.trim(),
-        address: form.address.trim(),
-        notes: form.notes.trim() || null,
-        items: orderItems,
-        total_amount: total,
-        status: 'pending',
+        full_name:    form.full_name.trim(),
+        phone:        form.phone.trim(),
+        wilaya:       form.wilaya,
+        commune:      form.commune,
+        address:      '',
+        notes:        form.notes.trim() || null,
+        items:        orderItems,
+        total_amount: totalWithDelivery,
+        status:       'pending',
       }).select('id').single()
 
       if (error) throw error
-
       clearCart()
       router.push(`/confirmation?id=${data.id}`)
     } catch (err) {
       console.error(err)
-      toast.error('Erreur lors de l\'envoi. Veuillez réessayer.')
+      toast.error("Erreur lors de l'envoi. Veuillez réessayer.")
     } finally {
       setSubmitting(false)
     }
   }
 
+  // ── Panier vide ─────────────────────────────────────────────────
   if (items.length === 0) {
     return (
       <div className="min-h-screen">
@@ -124,10 +214,13 @@ export default function CartPage() {
       errors[name] ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white hover:border-gray-300'
     }`
 
+  const totalWithDelivery = total + (deliveryFee ?? 0)
+
   return (
     <div className="min-h-screen">
       <Header />
       <main className="max-w-5xl mx-auto px-4 py-8">
+
         <div className="flex items-center gap-3 mb-8">
           <Link href="/" className="text-gray-400 hover:text-rose-500 transition">
             <ArrowLeftIcon className="w-5 h-5" />
@@ -139,25 +232,17 @@ export default function CartPage() {
         </div>
 
         <div className="grid lg:grid-cols-5 gap-8">
-          {/* Articles */}
+
+          {/* ── Articles ─────────────────────────────────── */}
           <div className="lg:col-span-3 space-y-3">
             {items.map(({ product, quantity }) => {
               const price = getDiscountedPrice(product.price, product.discount_percent)
               return (
-                <div
-                  key={product.id}
-                  className="bg-white rounded-2xl p-4 flex gap-4 shadow-sm border border-gray-100"
-                >
+                <div key={product.id} className="bg-white rounded-2xl p-4 flex gap-4 shadow-sm border border-gray-100">
                   <Link href={`/produit/${product.id}`} className="flex-shrink-0">
                     <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100">
                       {product.images?.[0] ? (
-                        <Image
-                          src={product.images[0]}
-                          alt={product.title}
-                          width={80}
-                          height={80}
-                          className="w-full h-full object-cover"
-                        />
+                        <Image src={product.images[0]} alt={product.title} width={80} height={80} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-2xl">📦</div>
                       )}
@@ -165,9 +250,7 @@ export default function CartPage() {
                   </Link>
                   <div className="flex-1 min-w-0">
                     <Link href={`/produit/${product.id}`}>
-                      <h3 className="font-medium text-gray-800 text-sm hover:text-rose-500 transition line-clamp-2">
-                        {product.title}
-                      </h3>
+                      <h3 className="font-medium text-gray-800 text-sm hover:text-rose-500 transition line-clamp-2">{product.title}</h3>
                     </Link>
                     <p className="text-rose-600 font-bold mt-1">{formatPrice(price)}</p>
                     {product.discount_percent > 0 && (
@@ -175,142 +258,148 @@ export default function CartPage() {
                     )}
                     <div className="flex items-center gap-2 mt-2">
                       <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-2 py-1">
-                        <button
-                          onClick={() => updateQuantity(product.id, quantity - 1)}
-                          className="w-6 h-6 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50"
-                        >
+                        <button onClick={() => updateQuantity(product.id, quantity - 1)} className="w-6 h-6 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50">
                           <MinusIcon className="w-3 h-3" />
                         </button>
                         <span className="w-6 text-center text-sm font-bold">{quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(product.id, quantity + 1)}
-                          className="w-6 h-6 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50"
-                        >
+                        <button onClick={() => updateQuantity(product.id, quantity + 1)} className="w-6 h-6 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50">
                           <PlusIcon className="w-3 h-3" />
                         </button>
                       </div>
-                      <span className="text-xs text-gray-400">
-                        Total: {formatPrice(price * quantity)}
-                      </span>
+                      <span className="text-xs text-gray-400">= {formatPrice(price * quantity)}</span>
                     </div>
                   </div>
-                  <button
-                    onClick={() => removeFromCart(product.id)}
-                    className="text-gray-400 hover:text-red-500 transition p-1 self-start"
-                  >
+                  <button onClick={() => removeFromCart(product.id)} className="text-gray-400 hover:text-red-500 transition p-1 self-start">
                     <TrashIcon className="w-4 h-4" />
                   </button>
                 </div>
               )
             })}
 
-            {/* Résumé */}
-            <div className="bg-rose-50 rounded-2xl p-4 border border-rose-100">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-700 font-medium">Total commande</span>
-                <span className="text-2xl font-bold text-gray-900">{formatPrice(total)}</span>
+            {/* Récapitulatif */}
+            <div className="bg-rose-50 rounded-2xl p-4 border border-rose-100 space-y-2">
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Sous-total ({items.reduce((s, i) => s + i.quantity, 0)} article{items.reduce((s, i) => s + i.quantity, 0) > 1 ? 's' : ''})</span>
+                <span className="font-semibold">{formatPrice(total)}</span>
               </div>
-              <p className="text-xs text-gray-500 mt-1">Frais de livraison calculés à la confirmation</p>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span className="flex items-center gap-1"><TruckIcon className="w-4 h-4" /> Livraison</span>
+                <span className={`font-semibold ${deliveryFee !== null ? 'text-emerald-600' : 'text-gray-400'}`}>
+                  {deliveryFee === null ? '— sélectionnez une wilaya' : deliveryFee === 0 ? 'Gratuit' : formatPrice(deliveryFee)}
+                </span>
+              </div>
+              <div className="pt-2 border-t border-rose-200 flex justify-between items-center">
+                <span className="font-semibold text-gray-800">Total TTC</span>
+                <span className="text-2xl font-bold text-gray-900">{formatPrice(totalWithDelivery)}</span>
+              </div>
             </div>
           </div>
 
-          {/* Formulaire commande */}
+          {/* ── Formulaire ───────────────────────────────── */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-24">
               <h2 className="text-lg font-bold text-gray-900 mb-5">Informations de livraison</h2>
+
               <form onSubmit={handleSubmit} className="space-y-4">
+
+                {/* Nom complet */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet *</label>
-                  <input
-                    name="full_name"
-                    value={form.full_name}
-                    onChange={handleChange}
-                    placeholder="Prénom et nom"
-                    className={fieldClass('full_name')}
-                  />
+                  <input name="full_name" value={form.full_name} onChange={handleChange} placeholder="Prénom et nom" className={fieldClass('full_name')} />
                   {errors.full_name && <p className="text-red-500 text-xs mt-1">{errors.full_name}</p>}
                 </div>
 
+                {/* Téléphone */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone *</label>
-                  <input
-                    name="phone"
-                    value={form.phone}
-                    onChange={handleChange}
-                    placeholder="0550 123 456"
-                    className={fieldClass('phone')}
-                  />
+                  <input name="phone" value={form.phone} onChange={handleChange} placeholder="0550 123 456" className={fieldClass('phone')} />
                   {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                 </div>
 
+                {/* Wilaya */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Wilaya *</label>
                   <select
-                    name="wilaya"
-                    value={form.wilaya}
-                    onChange={handleChange}
-                    className={fieldClass('wilaya')}
+                    value={form.wilayaId}
+                    onChange={handleWilayaChange}
+                    disabled={loadingWilayas}
+                    className={`${fieldClass('wilaya')} disabled:opacity-60 disabled:cursor-wait`}
                   >
-                    <option value="">Sélectionner une wilaya...</option>
-                    {WILAYAS.map(w => <option key={w} value={w}>{w}</option>)}
+                    <option value="">
+                      {loadingWilayas ? 'Chargement...' : 'Sélectionner une wilaya...'}
+                    </option>
+                    {wilayas.map(w => (
+                      <option key={wId(w)} value={String(wId(w))}>
+                        {String(wId(w)).padStart(2, '0')} — {wName(w)}
+                      </option>
+                    ))}
                   </select>
                   {errors.wilaya && <p className="text-red-500 text-xs mt-1">{errors.wilaya}</p>}
                 </div>
 
+                {/* Commune */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Commune / Ville *</label>
-                  <input
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Commune *</label>
+                  <select
                     name="commune"
                     value={form.commune}
                     onChange={handleChange}
-                    placeholder="Votre commune"
-                    className={fieldClass('commune')}
-                  />
+                    disabled={!form.wilayaId || loadingCommunes}
+                    className={`${fieldClass('commune')} disabled:opacity-60 disabled:cursor-wait`}
+                  >
+                    <option value="">
+                      {!form.wilayaId ? "Sélectionnez d'abord une wilaya" : loadingCommunes ? 'Chargement...' : 'Sélectionner une commune...'}
+                    </option>
+                    {communes.map((c, i) => (
+                      <option key={c.commune_id ?? c.id ?? i} value={cName(c)}>
+                        {cName(c)}
+                      </option>
+                    ))}
+                  </select>
                   {errors.commune && <p className="text-red-500 text-xs mt-1">{errors.commune}</p>}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Adresse *</label>
-                  <textarea
-                    name="address"
-                    value={form.address}
-                    onChange={handleChange}
-                    placeholder="Rue, quartier, immeuble..."
-                    rows={2}
-                    className={fieldClass('address')}
-                  />
-                  {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
-                </div>
-
+                {/* Notes */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optionnel)</label>
-                  <textarea
-                    name="notes"
-                    value={form.notes}
-                    onChange={handleChange}
-                    placeholder="Instructions spéciales pour la livraison..."
-                    rows={2}
-                    className={fieldClass('notes')}
-                  />
+                  <textarea name="notes" value={form.notes} onChange={handleChange} placeholder="Instructions spéciales..." rows={2} className={fieldClass('notes')} />
                 </div>
 
+                {/* Récapitulatif dans le formulaire */}
+                <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm border border-gray-100">
+                  <div className="flex justify-between text-gray-600">
+                    <span>Sous-total</span>
+                    <span className="font-medium">{formatPrice(total)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span className="flex items-center gap-1"><TruckIcon className="w-3.5 h-3.5" /> Livraison</span>
+                    <span className={`font-medium ${deliveryFee !== null ? 'text-emerald-600' : 'text-gray-400'}`}>
+                      {deliveryFee === null ? '—' : deliveryFee === 0 ? 'Gratuit' : formatPrice(deliveryFee)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between font-bold text-gray-900 pt-1 border-t border-gray-200">
+                    <span>Total à payer</span>
+                    <span className="text-rose-600">{formatPrice(totalWithDelivery)}</span>
+                  </div>
+                </div>
+
+                {/* Submit */}
                 <button
                   type="submit"
                   disabled={submitting}
                   className="w-full bg-rose-500 hover:bg-rose-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl transition text-base shadow-lg shadow-rose-200 flex items-center justify-center gap-2"
                 >
                   {submitting ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      Envoi en cours...
-                    </>
+                    <><div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />Envoi en cours...</>
                   ) : (
                     <>🛒 Passer la commande</>
                   )}
                 </button>
+
               </form>
             </div>
           </div>
+
         </div>
       </main>
     </div>

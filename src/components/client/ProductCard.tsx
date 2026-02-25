@@ -27,13 +27,13 @@ export default function ProductCard({ product }: Props) {
       href={`/produit/${product.id}`}
       className="group block rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 bg-white border border-gray-100 hover:-translate-y-1"
     >
-      <div className="relative aspect-square overflow-hidden bg-gray-100">
+      <div className="relative aspect-square overflow-hidden bg-gray-50">
         {mainImage ? (
           <Image
             src={mainImage}
             alt={product.title}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            className="object-contain group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">

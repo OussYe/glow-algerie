@@ -221,10 +221,6 @@ export default function AdminCommandes() {
                     <p className="font-medium">{selected.commune}</p>
                   </div>
                 </div>
-                <div>
-                  <p className="text-gray-400 text-xs">Adresse</p>
-                  <p className="font-medium">{selected.address}</p>
-                </div>
                 {selected.notes && (
                   <div>
                     <p className="text-gray-400 text-xs">Notes</p>
@@ -258,11 +254,31 @@ export default function AdminCommandes() {
                 </div>
               </div>
 
-              {/* Total */}
-              <div className="flex justify-between items-center bg-rose-50 rounded-2xl p-4">
-                <span className="font-semibold text-gray-700">Total commande</span>
-                <span className="text-xl font-bold text-gray-900">{formatPrice(selected.total_amount)}</span>
-              </div>
+              {/* Total avec livraison */}
+              {(() => {
+                const itemsSubtotal = (selected.items as OrderItem[]).reduce(
+                  (sum, item) => sum + item.price * item.quantity, 0
+                )
+                const deliveryFee = selected.total_amount - itemsSubtotal
+                return (
+                  <div className="bg-rose-50 rounded-2xl p-4 space-y-2">
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Sous-total articles</span>
+                      <span className="font-medium">{formatPrice(itemsSubtotal)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>🚚 Livraison</span>
+                      <span className="font-medium text-emerald-700">
+                        {deliveryFee <= 0 ? 'Gratuit' : formatPrice(deliveryFee)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-rose-200">
+                      <span className="font-semibold text-gray-700">Total commande</span>
+                      <span className="text-xl font-bold text-gray-900">{formatPrice(selected.total_amount)}</span>
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           </div>
         </div>
