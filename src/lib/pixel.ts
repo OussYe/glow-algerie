@@ -1,35 +1,26 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare global {
   interface Window {
-    fbq?: ((...args: unknown[]) => void) & {
-      callMethod?: ((...args: unknown[]) => void) | null
-      queue: unknown[][]
-      loaded?: boolean
-      version?: string
-      push?: (...args: unknown[]) => void
-    }
+    fbq?: (...args: unknown[]) => void
     _fbq?: unknown
   }
 }
 
 /**
  * Injecte le SDK fbevents.js et crée le stub officiel Facebook.
- * Identique au snippet officiel Meta Pixel — le stub queue les appels
- * jusqu'à ce que le SDK soit chargé, puis les flush automatiquement.
+ * Le stub queue les appels jusqu'à ce que le SDK soit chargé, puis les flush.
  */
 export function loadPixelScript(): void {
   if (typeof window === 'undefined') return
   if (window.fbq) return
 
-  // Créer le stub AVANT d'ajouter le script (même ordre que le snippet officiel)
-  const n = function (...args: unknown[]) {
+  const n: any = function (...args: unknown[]) {
     if (n.callMethod) {
-      // SDK chargé → traitement direct
       n.callMethod.apply(n, args)
     } else {
-      // SDK pas encore chargé → mise en file d'attente
       n.queue.push(args)
     }
-  } as unknown as NonNullable<typeof window.fbq>
+  }
 
   n.push = n
   n.queue = []
