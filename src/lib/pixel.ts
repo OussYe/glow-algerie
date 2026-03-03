@@ -29,7 +29,7 @@ export function loadPixelScript(): void {
       // SDK pas encore chargé → mise en file d'attente
       n.queue.push(args)
     }
-  } as typeof window.fbq
+  } as unknown as NonNullable<typeof window.fbq>
 
   n.push = n
   n.queue = []
