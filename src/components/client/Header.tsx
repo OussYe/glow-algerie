@@ -40,38 +40,46 @@ export default function Header({ categories = [] }: Props) {
     <header className="sticky top-0 z-40 bg-gray-900 text-white shadow-lg">
       <div className="max-w-7xl mx-auto px-4">
 
-        {/* ── Row 1 : position:relative pour le centrage absolu ── */}
-        <div className="relative h-16 flex items-center">
+        {/* ── Row 1 ── */}
+        <div className="relative h-14 flex items-center">
 
-          {/* Centre — Livraison (centré dans le header via position absolute) */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          {/* Centre — Livraison (desktop seulement) */}
+          <div className="absolute inset-0 hidden md:flex items-center justify-center pointer-events-none">
             <span className="text-xs font-semibold tracking-widest uppercase text-gray-300 whitespace-nowrap">
               🚚&nbsp;{lang === 'ar' ? 'التوصيل في كل الجزائر' : 'Livraison partout en Algérie'}
             </span>
           </div>
 
           {/* Gauche — Logo + nom */}
-          <Link href="/" className="relative z-10 flex items-center gap-2.5 flex-shrink-0 group">
+          <Link href="/" className="relative z-10 flex items-center gap-2 flex-shrink-0 group">
             <Image
               src="/logo.png"
               alt="Glow Algérie"
-              width={40}
-              height={40}
+              width={36}
+              height={36}
               className="object-contain group-hover:opacity-90 transition"
               priority
             />
-            <span className="font-bold text-lg tracking-tight">
+            <span className="font-bold text-base tracking-tight">
               Glow<span className="text-rose-400">Algérie</span>
             </span>
           </Link>
 
-          {/* Droite — réseaux + langue + panier + hamburger */}
-          <div className="relative z-10 ml-auto flex items-center gap-1.5">
+          {/* Mobile centre — Livraison */}
+          <div className="md:hidden flex-1 flex items-center justify-center px-2 overflow-hidden">
+            <span className="text-[10px] font-semibold tracking-wide uppercase text-gray-400 truncate">
+              🚚&nbsp;{lang === 'ar' ? 'توصيل في كل الجزائر' : 'Livraison en Algérie'}
+            </span>
+          </div>
+
+          {/* Droite — réseaux (desktop) + langue + panier + hamburger */}
+          <div className="relative z-10 ml-auto md:ml-auto flex items-center gap-1">
+            {/* Réseaux sociaux — desktop uniquement */}
             <a
               href="https://www.facebook.com/profile.php?id=100064619993176"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex text-gray-400 hover:text-white transition p-1.5 rounded hover:bg-white/10"
+              className="hidden md:flex text-gray-400 hover:text-white transition p-1.5 rounded hover:bg-white/10"
               aria-label="Facebook"
             >
               <FacebookIcon />
@@ -80,7 +88,7 @@ export default function Header({ categories = [] }: Props) {
               href="https://www.instagram.com/glow.by.algerie/"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex text-gray-400 hover:text-white transition p-1.5 rounded hover:bg-white/10"
+              className="hidden md:flex text-gray-400 hover:text-white transition p-1.5 rounded hover:bg-white/10"
               aria-label="Instagram"
             >
               <InstagramIcon />
