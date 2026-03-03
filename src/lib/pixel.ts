@@ -1,6 +1,6 @@
 declare global {
   interface Window {
-    fbq: ((...args: unknown[]) => void) & {
+    fbq?: ((...args: unknown[]) => void) & {
       callMethod?: ((...args: unknown[]) => void) | null
       queue: unknown[][]
       loaded?: boolean
