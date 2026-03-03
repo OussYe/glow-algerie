@@ -244,7 +244,14 @@ export default function AdminCommandes() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-800 line-clamp-1">{item.title}</p>
-                        <p className="text-xs text-gray-500">Qté: {item.quantity} × {formatPrice(item.price)}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-xs text-gray-500">Qté: {item.quantity} × {formatPrice(item.price)}</p>
+                          {item.size && (
+                            <span className="text-xs font-semibold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-md">
+                              {item.size}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <p className="font-bold text-gray-800 text-sm">
                         {formatPrice(item.price * item.quantity)}

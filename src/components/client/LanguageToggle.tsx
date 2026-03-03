@@ -8,7 +8,7 @@ export default function LanguageToggle() {
   return (
     <button
       onClick={() => setLang(lang === 'ar' ? 'fr' : 'ar')}
-      className="text-sm font-semibold text-gray-500 hover:text-rose-500 transition-colors px-2 py-1 rounded-lg hover:bg-rose-50"
+      className="text-sm font-semibold text-gray-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/10"
       aria-label="Changer la langue / تغيير اللغة"
     >
       {lang === 'ar' ? 'FR' : 'عربي'}

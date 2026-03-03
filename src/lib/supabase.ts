@@ -48,7 +48,10 @@ export type Database = {
           discount_percent: number
           images: string[]
           videos: string[]
+          sizes: string[] | null
+          pixel_id: string | null
           in_stock: boolean
+          featured: boolean
           created_at: string
         }
         Insert: {
@@ -62,7 +65,10 @@ export type Database = {
           discount_percent?: number
           images?: string[]
           videos?: string[]
+          sizes?: string[] | null
+          pixel_id?: string | null
           in_stock?: boolean
+          featured?: boolean
           created_at?: string
         }
         Update: {
@@ -76,7 +82,10 @@ export type Database = {
           discount_percent?: number
           images?: string[]
           videos?: string[]
+          sizes?: string[] | null
+          pixel_id?: string | null
           in_stock?: boolean
+          featured?: boolean
         }
       }
       orders: {
@@ -124,9 +133,11 @@ export type OrderItem = {
   price: number
   quantity: number
   image: string
+  size?: string
 }
 
 export type CartItem = {
   product: Product
   quantity: number
+  selectedSize?: string
 }

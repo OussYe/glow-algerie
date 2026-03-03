@@ -14,7 +14,7 @@ export default function ConfirmationContent({ shortId }: Props) {
   return (
     <main className="max-w-xl mx-auto px-4 py-20 text-center">
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10">
-        <CheckCircleIcon className="w-16 h-16 text-rose-400 mx-auto mb-6" />
+        <CheckCircleIcon className="w-16 h-16 text-emerald-500 mx-auto mb-6" />
         <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('orderConfirmed')}</h1>
         <p className="text-gray-500 mb-6">{t('orderSuccess')}</p>
 

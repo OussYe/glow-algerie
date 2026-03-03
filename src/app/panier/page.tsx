@@ -8,6 +8,7 @@ import { useCart } from '@/context/CartContext'
 import { useTranslation } from '@/context/LanguageContext'
 import { formatPrice, getDiscountedPrice } from '@/lib/cart'
 import { supabase, OrderItem } from '@/lib/supabase'
+import { loadPixelScript, initPixel, trackSingle } from '@/lib/pixel'
 import {
   TrashIcon,
   MinusIcon,
@@ -91,6 +92,28 @@ export default function CartPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // ── Pixel Meta Ads : InitiateCheckout ───────────────────────────
+  // setTimeout + cleanup pour éviter le double-fire du React StrictMode
+  useEffect(() => {
+    if (items.length === 0) return
+    const pixelIds = [...new Set(items.flatMap(i => i.product.pixel_id ? [i.product.pixel_id] : []))]
+    if (pixelIds.length === 0) return
+    const totalQtyLocal = items.reduce((s, i) => s + i.quantity, 0)
+    const id = setTimeout(() => {
+      loadPixelScript()
+      pixelIds.forEach(pid => {
+        initPixel(pid)
+        trackSingle(pid, 'InitiateCheckout', {
+          value: total,
+          currency: 'DZD',
+          num_items: totalQtyLocal,
+        })
+      })
+    }, 100)
+    return () => clearTimeout(id)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // ── Changement de wilaya → communes + tarif ─────────────────────
   const handleWilayaChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const wilayaId = e.target.value   // juste l'id numérique
@@ -164,6 +187,7 @@ export default function CartPage() {
         price:      getDiscountedPrice(item.product.price, item.product.discount_percent),
         quantity:   item.quantity,
         image:      item.product.images?.[0] || '',
+        size:       item.selectedSize,
       }))
 
       const totalWithDelivery = total + (deliveryFee ?? 0)
@@ -181,6 +205,19 @@ export default function CartPage() {
       }).select('id').single()
 
       if (error) throw error
+
+      // Tracking Purchase (avant clearCart car celui-ci vide les items)
+      const pixelIds = [...new Set(items.flatMap(i => i.product.pixel_id ? [i.product.pixel_id] : []))]
+      const contentIds = items.map(i => i.product.id)
+      pixelIds.forEach(pid => {
+        trackSingle(pid, 'Purchase', {
+          value: totalWithDelivery,
+          currency: 'DZD',
+          content_ids: contentIds,
+          content_type: 'product',
+        })
+      })
+
       clearCart()
       router.push(`/confirmation?id=${data.id}`)
     } catch (err) {
@@ -239,10 +276,11 @@ export default function CartPage() {
 
           {/* ── Articles ─────────────────────────────────── */}
           <div className="lg:col-span-3 space-y-3">
-            {items.map(({ product, quantity }) => {
+            {items.map(({ product, quantity, selectedSize }) => {
               const price = getDiscountedPrice(product.price, product.discount_percent)
+              const itemKey = selectedSize ? `${product.id}:${selectedSize}` : product.id
               return (
-                <div key={product.id} className="bg-white rounded-2xl p-4 flex gap-4 shadow-sm border border-gray-100">
+                <div key={itemKey} className="bg-white rounded-2xl p-4 flex gap-4 shadow-sm border border-gray-100">
                   <Link href={`/produit/${product.id}`} className="flex-shrink-0">
                     <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100">
                       {product.images?.[0] ? (
@@ -256,24 +294,29 @@ export default function CartPage() {
                     <Link href={`/produit/${product.id}`}>
                       <h3 className="font-medium text-gray-800 text-sm hover:text-rose-500 transition line-clamp-2">{product.title}</h3>
                     </Link>
-                    <p className="text-rose-600 font-bold mt-1">{formatPrice(price)}</p>
+                    {selectedSize && (
+                      <span className="inline-block mt-1 text-xs font-semibold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-lg">
+                        Taille : {selectedSize}
+                      </span>
+                    )}
+                    <p className="text-emerald-600 font-bold mt-1">{formatPrice(price)}</p>
                     {product.discount_percent > 0 && (
-                      <p className="text-xs text-gray-400 line-through">{formatPrice(product.price)}</p>
+                      <p className="text-xs text-red-400 line-through">{formatPrice(product.price)}</p>
                     )}
                     <div className="flex items-center gap-2 mt-2">
                       <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-2 py-1">
-                        <button onClick={() => updateQuantity(product.id, quantity - 1)} className="w-6 h-6 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50">
+                        <button onClick={() => updateQuantity(product.id, quantity - 1, selectedSize)} className="w-6 h-6 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50">
                           <MinusIcon className="w-3 h-3" />
                         </button>
                         <span className="w-6 text-center text-sm font-bold">{quantity}</span>
-                        <button onClick={() => updateQuantity(product.id, quantity + 1)} className="w-6 h-6 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50">
+                        <button onClick={() => updateQuantity(product.id, quantity + 1, selectedSize)} className="w-6 h-6 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50">
                           <PlusIcon className="w-3 h-3" />
                         </button>
                       </div>
                       <span className="text-xs text-gray-400">= {formatPrice(price * quantity)}</span>
                     </div>
                   </div>
-                  <button onClick={() => removeFromCart(product.id)} className="text-gray-400 hover:text-red-500 transition p-1 self-start">
+                  <button onClick={() => removeFromCart(product.id, selectedSize)} className="text-gray-400 hover:text-red-500 transition p-1 self-start">
                     <TrashIcon className="w-4 h-4" />
                   </button>
                 </div>
@@ -383,7 +426,7 @@ export default function CartPage() {
                   </div>
                   <div className="flex justify-between font-bold text-gray-900 pt-1 border-t border-gray-200">
                     <span>{t('totalToPay')}</span>
-                    <span className="text-rose-600">{formatPrice(totalWithDelivery)}</span>
+                    <span className="text-gray-900">{formatPrice(totalWithDelivery)}</span>
                   </div>
                 </div>
 

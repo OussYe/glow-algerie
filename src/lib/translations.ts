@@ -10,7 +10,7 @@ export const translations = {
     heroBadge: 'التوصيل في جميع أنحاء الجزائر',
     heroTitle: 'اكتشف متجرنا',
     heroSubtitle: 'منتجات مختارة بعناية. جودة مضمونة، توصيل سريع.',
-    copyright: '© 2024 Glow Algérie. جميع الحقوق محفوظة.',
+    copyright: '© 2026 Glow Algérie. جميع الحقوق محفوظة.',
 
     // Categories & Products
     categories: 'الأقسام',
@@ -23,6 +23,7 @@ export const translations = {
     addToCart: 'أضف إلى السلة',
     addedToCart: 'تمت الإضافة إلى السلة',
     addedQtyToCart: 'تمت إضافة {qty} منتج إلى السلة',
+    viewCart: 'عرض السلة',
     outOfStock: 'نفد المخزون',
     inStock: 'متوفر',
     description: 'الوصف',
@@ -35,6 +36,8 @@ export const translations = {
     paymentInfo: '🔒 الدفع عند الاستلام (نقداً)',
     qualityInfo: '⭐ جودة مضمونة',
     mediaAlt: 'وسيط {n}',
+    selectSize: 'اختر المقاس',
+    sizeRequired: 'يرجى اختيار المقاس قبل الإضافة إلى السلة',
 
     // Cart page
     myCart: 'سلتي',
@@ -92,7 +95,7 @@ export const translations = {
     heroBadge: 'Livraison partout en Algérie',
     heroTitle: 'Découvrez notre boutique',
     heroSubtitle: 'Des produits soigneusement sélectionnés. Qualité garantie, livraison rapide.',
-    copyright: '© 2024 Glow Algérie. Tous droits réservés.',
+    copyright: '© 2026 Glow Algérie. Tous droits réservés.',
 
     // Categories & Products
     categories: 'Catégories',
@@ -105,6 +108,7 @@ export const translations = {
     addToCart: 'Ajouter au panier',
     addedToCart: 'Ajouté au panier',
     addedQtyToCart: '{qty} article(s) ajouté(s) au panier',
+    viewCart: 'Voir le panier',
     outOfStock: 'Rupture de stock',
     inStock: 'En stock',
     description: 'Description',
@@ -117,6 +121,8 @@ export const translations = {
     paymentInfo: '🔒 Paiement à la livraison (cash)',
     qualityInfo: '⭐ Qualité garantie',
     mediaAlt: 'Média {n}',
+    selectSize: 'Choisissez votre taille',
+    sizeRequired: 'Veuillez choisir une taille avant d\'ajouter au panier',
 
     // Cart page
     myCart: 'Mon Panier',

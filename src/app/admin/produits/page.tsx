@@ -22,14 +22,20 @@ type FormState = {
   price: string
   discount_percent: string
   in_stock: boolean
+  featured: boolean
   images: string[]
   videos: string[]
+  sizes: string[]
+  pixel_id: string
 }
 
 const EMPTY: FormState = {
   category_id: '', title: '', title_ar: '', description: '', description_ar: '',
-  price: '', discount_percent: '0', in_stock: true, images: [], videos: [],
+  price: '', discount_percent: '0', in_stock: true, featured: false, images: [], videos: [], sizes: [], pixel_id: '',
 }
+
+const PRESET_SHOE_SIZES = ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47']
+const PRESET_CLOTH_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
 
 export default function AdminProduits() {
   const [products, setProducts] = useState<Product[]>([])
@@ -43,6 +49,7 @@ export default function AdminProduits() {
   const [uploadingVid, setUploadingVid] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [sizeInput, setSizeInput] = useState('')
   const imgRef = useRef<HTMLInputElement>(null)
   const vidRef = useRef<HTMLInputElement>(null)
 
@@ -78,13 +85,35 @@ export default function AdminProduits() {
       price: String(p.price),
       discount_percent: String(p.discount_percent),
       in_stock: p.in_stock,
+      featured: p.featured ?? false,
       images: p.images || [],
       videos: p.videos || [],
+      sizes: p.sizes || [],
+      pixel_id: p.pixel_id || '',
     })
+    setSizeInput('')
     setShowForm(true)
   }
 
-  const closeForm = () => { setShowForm(false); setEditing(null); setForm(EMPTY) }
+  const closeForm = () => { setShowForm(false); setEditing(null); setForm(EMPTY); setSizeInput('') }
+
+  const togglePresetSize = (size: string) => {
+    setForm(f => ({
+      ...f,
+      sizes: f.sizes.includes(size) ? f.sizes.filter(s => s !== size) : [...f.sizes, size],
+    }))
+  }
+
+  const addCustomSize = () => {
+    const val = sizeInput.trim().toUpperCase()
+    if (!val || form.sizes.includes(val)) { setSizeInput(''); return }
+    setForm(f => ({ ...f, sizes: [...f.sizes, val] }))
+    setSizeInput('')
+  }
+
+  const removeSize = (size: string) => {
+    setForm(f => ({ ...f, sizes: f.sizes.filter(s => s !== size) }))
+  }
 
   const handleImgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -148,8 +177,11 @@ export default function AdminProduits() {
         price: Number(form.price),
         discount_percent: Number(form.discount_percent) || 0,
         in_stock: form.in_stock,
+        featured: form.featured,
         images: form.images,
         videos: form.videos,
+        sizes: form.sizes.length > 0 ? form.sizes : null,
+        pixel_id: form.pixel_id.trim() || null,
       }
       if (editing) {
         const { error } = await supabase.from('products').update(payload).eq('id', editing.id)
@@ -242,6 +274,7 @@ export default function AdminProduits() {
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase px-4 py-3 hidden lg:table-cell">Catégorie</th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase px-4 py-3">Prix</th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase px-4 py-3 hidden md:table-cell">Stock</th>
+                    <th className="text-center text-xs font-semibold text-gray-500 uppercase px-4 py-3 hidden sm:table-cell">Slider</th>
                     <th className="text-right text-xs font-semibold text-gray-500 uppercase px-4 py-3">Actions</th>
                   </tr>
                 </thead>
@@ -274,6 +307,11 @@ export default function AdminProduits() {
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.in_stock ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
                           {p.in_stock ? 'En stock' : 'Rupture'}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-center hidden sm:table-cell">
+                        {p.featured && (
+                          <span title="Affiché dans le slider" className="text-lg leading-none">⭐</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1 justify-end">
@@ -388,19 +426,153 @@ export default function AdminProduits() {
                   />
                 </div>
               </div>
-              {/* Stock */}
-              <div className="flex items-center gap-3">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.in_stock}
-                    onChange={e => setForm(f => ({ ...f, in_stock: e.target.checked }))}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-checked:bg-emerald-500 rounded-full peer-focus:ring-2 peer-focus:ring-emerald-300 transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
-                </label>
-                <span className="text-sm font-medium text-gray-700">En stock</span>
+              {/* Stock + Featured */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.in_stock}
+                      onChange={e => setForm(f => ({ ...f, in_stock: e.target.checked }))}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-checked:bg-emerald-500 rounded-full peer-focus:ring-2 peer-focus:ring-emerald-300 transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
+                  </label>
+                  <span className="text-sm font-medium text-gray-700">En stock</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.featured}
+                      onChange={e => setForm(f => ({ ...f, featured: e.target.checked }))}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-checked:bg-rose-500 rounded-full peer-focus:ring-2 peer-focus:ring-rose-300 transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
+                  </label>
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">⭐ Mettre en avant</span>
+                    <p className="text-xs text-gray-400">Affiché dans le slider de la page d&apos;accueil</p>
+                  </div>
+                </div>
               </div>
+              {/* Tailles / Pointures */}
+              <div className="border border-gray-100 rounded-2xl p-4 space-y-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  Tailles / Pointures disponibles
+                  <span className="ml-1 text-gray-400 font-normal">(optionnel)</span>
+                </label>
+
+                {/* Presets pointures */}
+                <div>
+                  <p className="text-xs text-gray-500 mb-1.5">👟 Pointures</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PRESET_SHOE_SIZES.map(s => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => togglePresetSize(s)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition ${
+                          form.sizes.includes(s)
+                            ? 'bg-rose-500 border-rose-500 text-white'
+                            : 'border-gray-200 text-gray-600 hover:border-rose-300 hover:bg-rose-50'
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Presets vêtements */}
+                <div>
+                  <p className="text-xs text-gray-500 mb-1.5">👕 Tailles vêtements</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PRESET_CLOTH_SIZES.map(s => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => togglePresetSize(s)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition ${
+                          form.sizes.includes(s)
+                            ? 'bg-rose-500 border-rose-500 text-white'
+                            : 'border-gray-200 text-gray-600 hover:border-rose-300 hover:bg-rose-50'
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Taille personnalisée */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={sizeInput}
+                    onChange={e => setSizeInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomSize() } }}
+                    placeholder="Taille personnalisée..."
+                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={addCustomSize}
+                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-sm font-medium transition"
+                  >
+                    + Ajouter
+                  </button>
+                </div>
+
+                {/* Tailles sélectionnées */}
+                {form.sizes.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1 border-t border-gray-100">
+                    <span className="text-xs text-gray-400 w-full">Sélectionnées :</span>
+                    {form.sizes.map(s => (
+                      <span
+                        key={s}
+                        className="inline-flex items-center gap-1 bg-rose-100 text-rose-700 text-xs font-semibold px-2 py-1 rounded-lg"
+                      >
+                        {s}
+                        <button
+                          type="button"
+                          onClick={() => removeSize(s)}
+                          className="hover:text-rose-900 ml-0.5"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Pixel Meta Ads */}
+              <div className="border border-gray-100 rounded-2xl p-4 space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Pixel Meta Ads
+                  <span className="ml-1 text-gray-400 font-normal">(optionnel)</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.pixel_id}
+                  onChange={e => setForm(f => ({ ...f, pixel_id: e.target.value }))}
+                  placeholder="ex: 1234567890123456"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-rose-300"
+                />
+                <p className="text-xs text-gray-400">
+                  Trouvez votre Pixel ID dans{' '}
+                  <a
+                    href="https://business.facebook.com/events_manager"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-rose-500 hover:underline"
+                  >
+                    Meta Events Manager
+                  </a>
+                </p>
+              </div>
+
               {/* Images */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

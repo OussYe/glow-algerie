@@ -9,11 +9,10 @@ type Props = { params: Promise<{ id: string }> }
 export default async function ProductPage({ params }: Props) {
   const { id } = await params
 
-  const { data: product } = await supabase
-    .from('products')
-    .select('*, categories(name, id, name_ar)')
-    .eq('id', id)
-    .single()
+  const [{ data: product }, { data: categories }] = await Promise.all([
+    supabase.from('products').select('*, categories(name, id, name_ar)').eq('id', id).single(),
+    supabase.from('categories').select('*').order('created_at', { ascending: true }),
+  ])
 
   if (!product) notFound()
 
@@ -22,8 +21,8 @@ export default async function ProductPage({ params }: Props) {
   }).categories
 
   return (
-    <div className="min-h-screen">
-      <Header />
+    <div className="min-h-screen bg-white">
+      <Header categories={categories || []} />
       <main className="max-w-5xl mx-auto px-4 py-8">
         <Breadcrumb
           label={product.title}
@@ -34,7 +33,7 @@ export default async function ProductPage({ params }: Props) {
             nameAr: category.name_ar,
           } : undefined}
         />
-        <ProductDetailClient product={product} />
+        <ProductDetailClient product={product} pixelId={product.pixel_id} />
       </main>
     </div>
   )

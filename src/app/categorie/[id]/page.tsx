@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import Header from '@/components/client/Header'
 import ProductCard from '@/components/client/ProductCard'
+import { FooterSection } from '@/components/client/HeroSection'
 import { ProductSkeleton } from '@/components/ui/LoadingSkeleton'
 import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
@@ -17,17 +18,12 @@ async function ProductsGrid({ categoryId }: { categoryId: string }) {
     .eq('category_id', categoryId)
     .order('created_at', { ascending: false })
 
-  if (error) {
-    return <ProductsEmptyState type="error" />
-  }
-
-  if (!products || products.length === 0) {
-    return <ProductsEmptyState type="empty" />
-  }
+  if (error) return <ProductsEmptyState type="error" />
+  if (!products || products.length === 0) return <ProductsEmptyState type="empty" />
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-      {products.map((product) => (
+      {products.map(product => (
         <ProductCard key={product.id} product={product} />
       ))}
     </div>
@@ -37,18 +33,18 @@ async function ProductsGrid({ categoryId }: { categoryId: string }) {
 export default async function CategoryPage({ params }: Props) {
   const { id } = await params
 
-  const { data: category } = await supabase
-    .from('categories')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const [{ data: category }, { data: categories }] = await Promise.all([
+    supabase.from('categories').select('*').eq('id', id).single(),
+    supabase.from('categories').select('*').order('created_at', { ascending: true }),
+  ])
 
   if (!category) notFound()
 
   return (
-    <div className="min-h-screen">
-      <Header />
-      <main className="max-w-6xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-white">
+      <Header categories={categories || []} />
+
+      <main className="max-w-7xl mx-auto px-4 py-8">
         <Breadcrumb
           label={category.name}
           labelAr={category.name_ar}
@@ -61,7 +57,6 @@ export default async function CategoryPage({ params }: Props) {
           descriptionAr={category.description_ar}
         />
 
-        {/* Produits */}
         <Suspense
           fallback={
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
@@ -72,6 +67,8 @@ export default async function CategoryPage({ params }: Props) {
           <ProductsGrid categoryId={id} />
         </Suspense>
       </main>
+
+      <FooterSection />
     </div>
   )
 }

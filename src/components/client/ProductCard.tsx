@@ -6,7 +6,7 @@ import { Product } from '@/lib/supabase'
 import { formatPrice, getDiscountedPrice } from '@/lib/cart'
 import { useCart } from '@/context/CartContext'
 import toast from 'react-hot-toast'
-import { ShoppingCartIcon } from '@heroicons/react/24/outline'
+import { ShoppingCartIcon } from '@heroicons/react/24/solid'
 import { useTranslation } from '@/context/LanguageContext'
 
 type Props = { product: Product }
@@ -22,6 +22,7 @@ export default function ProductCard({ product }: Props) {
 
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault()
+    e.stopPropagation()
     addToCart(product)
     toast.success(t('addedToCart'), { duration: 1500 })
   }
@@ -29,54 +30,72 @@ export default function ProductCard({ product }: Props) {
   return (
     <Link
       href={`/produit/${product.id}`}
-      className="group block rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 bg-white border border-gray-100 hover:-translate-y-1"
+      className="group block bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300"
     >
-      <div className="relative aspect-square overflow-hidden bg-gray-50">
+      {/* ── Image ── */}
+      <div
+        className="relative overflow-hidden bg-gray-50"
+        style={{ aspectRatio: '3/4' }}
+      >
         {mainImage ? (
           <Image
             src={mainImage}
             alt={displayTitle}
             fill
-            className="object-contain group-hover:scale-105 transition-transform duration-500"
+            className="object-contain transition-transform duration-500 group-hover:scale-[1.04]"
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
             <span className="text-5xl">📦</span>
           </div>
         )}
+
+        {/* Badge réduction — pill arrondi */}
         {hasDiscount && (
-          <div className="absolute top-2 left-2 bg-rose-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+          <div
+            className="absolute top-2.5 left-2.5 bg-rose-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow"
+          >
             -{product.discount_percent}%
           </div>
         )}
+
+        {/* Overlay Rupture de stock */}
         {!product.in_stock && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <span className="bg-white text-gray-700 font-semibold text-sm px-3 py-1 rounded-full">
+            <span className="bg-white/90 text-gray-800 font-semibold text-xs px-4 py-1.5 rounded-full uppercase tracking-wide shadow">
               {t('outOfStock')}
             </span>
           </div>
         )}
       </div>
-      <div className="p-4">
-        <h3 className="font-medium text-gray-800 text-sm line-clamp-2 group-hover:text-rose-500 transition">
+
+      {/* ── Info ── */}
+      <div className="px-3 pt-3 pb-3">
+        {/* Titre */}
+        <h3 className="text-sm font-medium text-gray-800 line-clamp-2 leading-snug mb-2">
           {displayTitle}
         </h3>
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <div>
-            <span className="font-bold text-gray-900 text-base">
+
+        {/* Prix + bouton panier */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Prix */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="font-bold text-[#16a34a] text-sm">
               {formatPrice(finalPrice)}
             </span>
             {hasDiscount && (
-              <span className="ml-2 text-xs text-gray-400 line-through">
+              <span className="text-xs text-red-400 line-through">
                 {formatPrice(product.price)}
               </span>
             )}
           </div>
+
+          {/* Bouton panier — persistant, rose */}
           {product.in_stock && (
             <button
               onClick={handleAdd}
-              className="p-2 rounded-full bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-500 transition"
               aria-label={t('addToCart')}
+              className="flex-shrink-0 bg-rose-500 hover:bg-rose-600 active:scale-95 text-white rounded-full p-2 shadow transition-all duration-200"
             >
               <ShoppingCartIcon className="w-4 h-4" />
             </button>
